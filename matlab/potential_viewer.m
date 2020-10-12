@@ -1,43 +1,123 @@
 function potential_viewer()%, obstacle)
-    
-    load apf.mat
+    clc, clear all;
+    load apf2.mat
     width  = size(map, 2);
     height = size(map, 1);
-    axis([0 352 0 224]);
-    begin = [237;170];
+    axis([0 height 0 width]);
+    begin =[204; 146];
+    inflation_radius = 10;
+    
     obstacle = []; 
     target = [];
-    
-    for i = 2 : height-1
-        for j = 2 : width-1
+    for i = 2:size(map, 1)-1
+        for j = 2:size(map, 2 )-1
             if(map(i,j) == 100)
                 obstacle = [obstacle, [i;j]];
             end
-            if(map(i,j)==255)
+            if(map(i,j)==-1)
                 temp = 0;
-                temp = temp + (map(i+1, j)==0);
-                temp = temp + (map(i, j+1)==0);
-                temp = temp + (map(i-1, j)==0);
-                temp = temp + (map(i, j-1)==0);
-                if(temp>= 1)
+                if(map(i+1, j)==0)
+                    temp1 = 0;
+                    temp1 = temp1+ (map(i+2, j)==0);
+                    temp1 = temp1+ (map(i+1, j+1)==0);
+                    temp1 = temp1+ (map(i+1, j-1)==0);
+                    temp = temp +(temp1>0);
+                end
+
+                if(map(i, j+1)==0)
+                    temp1 = 0;
+                    temp1 = temp1+ (map(i, j+2)==0);
+                    temp1 = temp1+ (map(i+1, j+1)==0);
+                    temp1 = temp1+ (map(i-1, j+1)==0);
+                    temp = temp +(temp1>0);
+                end
+
+                if(map(i-1, j)==0)
+                    temp1 = 0;
+                    temp1 = temp1+ (map(i-1, j+1)==0);
+                    temp1 = temp1+ (map(i-1, j-1)==0);
+                    temp1 = temp1+ (map(i-2, j)==0);
+                    temp = temp +(temp1>0);
+                end
+
+                if(map(i, j-1)==0)
+                    temp1 = 0;
+                    temp1 = temp1+ (map(i, j-2)==0);
+                    temp1 = temp1+ (map(i+1, j-1)==0);
+                    temp1 = temp1+ (map(i-1, j-1)==0);
+                    temp = temp +(temp1>0);
+                end
+                if(temp > 0)
                     target = [target, [i;j]];
                 end
             end
         end
     end
 
-%     resolution = 0.25;
-% 
-%     sequence = 1:resolution:14;
-    z=zeros(width ,height);
-    for i = 1 : height
-        for j = 1 : width
-            z(j,i) = computNewPotentialMultiGoal_with_map(map, [i; j], target, obstacle, height, width);
-%             z(i,j) = computNewPotentialMultiGoal([1+i*resolution; 1+j*resolution], target, obstacle);
-        end
+    infoGain = zeros(1, size(target, 2));
+    
+    for i = 1: size(target, 2)
+       tempInfoGain = 0;
+       tempInfoGain = tempInfoGain + (map(target(1,i)+1, target(2,i)) ==-1);
+       tempInfoGain = tempInfoGain + (map(target(1,i), target(2,i)-1) ==-1);
+       tempInfoGain = tempInfoGain + (map(target(1,i)-1, target(2,i)) ==-1);
+       tempInfoGain = tempInfoGain + (map(target(1,i), target(2,i)+1) ==-1);
+
+       infoGain(i) = tempInfoGain;
+
     end
 
+    targets = [];
+
+    for i = 1: size(target,2)
+        temp = 0;
+        for j = 1 : size(obstacle, 2)
+           dis = abs(target(1,i)-obstacle(1,j)) ;
+           dis = dis + abs(target(2,i)-obstacle(2,j)) ;
+           if(dis < inflation_radius)
+               temp =1;
+               break;
+           end
+        end
+        if(temp == 1)
+            continue;
+        end
+        targets = [targets, target(:,i)];
+    end
+
+    obstacles = [];
+
+    for i = 1: size(obstacle,2)
+        if(map(obstacle(1,i)+1, obstacle(2,i))==100 && map(obstacle(1,i)-1, obstacle(2,i))==100 && map(obstacle(1,i), obstacle(2,i)-1)==100 && map(obstacle(1,i), obstacle(2,i)+1)==100)
+            continue;
+        end
+
+        obstacles = [obstacles, obstacle(:,i)];
+    end
+    
+    dismap = map_distance_generation_with_map(map ,begin, targets, obstacles, height, width);
+        
+    dismap(find( dismap == 10000)) = 0;
+    dismap(find( dismap == 20000)) = -5;
+    dismap(find( dismap == 20000)) = -5;
+    h = mesh(dismap);   
+    
+    path = [];
+    z=zeros(width ,height);
+    parfor i = 1 : height
+        for j = 1 : width
+            z(j,i) = computNewPotentialMultiGoal_with_map(infoGain, map, [i;j], targets, obstacles, height, width, path);
+        end
+    end
+    
+    
+    figure(2);
+    z(find( z < -100)) = 0;
+    z(find( z > 100)) = 10;
     h = mesh(z);   
+    
+    
+
     ylabel({'$ Y $'},'Interpreter','latex','FontSize',5);
     xlabel({'$ X $'},'Interpreter','latex','FontSize',5);
 

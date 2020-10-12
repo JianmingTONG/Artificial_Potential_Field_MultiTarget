@@ -1,15 +1,12 @@
 clc, clear all;
 
-load apf.mat
+load apf2.mat
 height = size(map,1);
 width  = size(map,2);
 
 axis([0 352 0 224]);
-% begin=[2;2];
-begin = [240;130];
+begin =[204; 146];
 curr = begin;
-% over=[14 14;5 14];
-
 
 % obstacle=[0 0 0 0 0 0 0 0 0 0 0  0  0  0  0  0   15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 1  2  3  4  5  6  7  8  9  10 11 12 13 14   1 2 3 4 5 6 7 8 9 10 11 12 13 14   5 5 5 5 5 5 5 5 5  5  5  5  10 10 10 10 10 10 10 10; 
 %           0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 0 0 0 0 0 0 0 0 0  0  0  0  0  0   2 3 4 5 6 7 8 9 10 11 12 15 14 13 12 11 10 6  9  13];
@@ -23,7 +20,7 @@ for i = 2:size(map, 1)-1
         if(map(i,j) == 100)
             obstacle = [obstacle, [i;j]];
         end
-        if(map(i,j)==255)
+        if(map(i,j)==-1)
             temp = 0;
             if(map(i+1, j)==0)
                 temp1 = 0;
@@ -65,16 +62,17 @@ end
 
 infoGain = zeros(1,size(target,2));
 for i = 1: size(target,2)
+   
    tempInfoGain = 0;
-   tempInfoGain = tempInfoGain + (map(target(1,i)+1, target(2,i)  ) ==255);
-   tempInfoGain = tempInfoGain + (map(target(1,i)-1, target(2,i)  ) ==255);
-   tempInfoGain = tempInfoGain + (map(target(1,i)+1, target(2,i)+1) ==255);
-   tempInfoGain = tempInfoGain + (map(target(1,i)+1, target(2,i)-1) ==255);
-   tempInfoGain = tempInfoGain + (map(target(1,i)-1, target(2,i)+1) ==255);
-   tempInfoGain = tempInfoGain + (map(target(1,i)-1, target(2,i)-1) ==255);
-   tempInfoGain = tempInfoGain + (map(target(1,i)  , target(2,i)+1) ==255);
-   tempInfoGain = tempInfoGain + (map(target(1,i)  , target(2,i)-1) ==255);
-   infoGain(i)  = tempInfoGain;
+   tempInfoGain = tempInfoGain + (map(target(1,i)+1, target(2,i)) ==-1);
+   tempInfoGain = tempInfoGain + (map(target(1,i), target(2,i)-1) ==-1);
+   tempInfoGain = tempInfoGain + (map(target(1,i)-1, target(2,i)) ==-1);
+   tempInfoGain = tempInfoGain + (map(target(1,i), target(2,i)+1) ==-1);
+   
+   infoGain(i) = tempInfoGain;
+   if((map(target(1,i)+1, target(2,i)) ==100) || (map(target(1,i)+1, target(2,i)) ==100) || (map(target(1,i), target(2,i)+1) ==100)|| (map(target(1,i), target(2,i)-1) ==100) || (map(target(1,i)+1, target(2,i)+1) ==100) || (map(target(1,i)+1, target(2,i)-1) ==100) || (map(target(1,i)-1, target(2,i)+1) ==100) || (map(target(1,i)-1, target(2,i)-1) ==100))
+        infoGain(i) = 0;
+   end
 end
 
 dis_map = map_distance_generation_with_map(map, curr, target, obstacle, height, width);

@@ -1,8 +1,10 @@
-function [ point ] = path_plan_direct_around(infoGain, map, begin,target,obstacle, height, width)
+function [ point ] = path_plan_direct_around(infoGain, map, begin, target, obstacle, height, width)
     iters=1; %迭代次数
     curr=begin;
     dis = 10;
     goalPotential = 100;
+    path = [];
+%     ever_been_times = 0;
     while ( (dis > 1) &&  (iters<=2000))
         point(:, iters)=curr;
  
@@ -29,22 +31,31 @@ function [ point ] = path_plan_direct_around(infoGain, map, begin,target,obstacl
             if (testPoint(1,i) < 1) || (testPoint(2,i) < 1) || (testPoint(1,i) > height) || (testPoint(2,i) > width)
                 testOut(i) = 500;
             else
-                testOut(i) = computNewPotentialMultiGoal_with_map(infoGain, map, testPoint(:,i), target, obstacle, height, width);
+%                 [testOut(i), ever_been_times] = computNewPotentialMultiGoal_with_map(infoGain, map, testPoint(:,i), target, obstacle, height, width, path, ever_been_times);
+                testOut(i) = computNewPotentialMultiGoal_with_map(infoGain, map, testPoint(:,i), target, obstacle, height, width, path);
             end
         end
-        [temp num]=min(testOut);
-        if (goalPotential>temp)
-            fprintf("potential %3.2f\n", temp);
-            curr=testPoint(:,num);
-            plot(curr(1),curr(2),'og');
-        else
-            curr = testPoint(:, floor(rand()*4)+1);
-            fprintf("potential %3.2f\n", testOut(:, floor(rand()*4)+1));
-            plot(curr(1), curr(2), 'og');
-        end
         
-               % using euclidean distance to measure whether path reaches the
-        % one of the target frontiers.
+        [temp num] = min(testOut);
+        curr=testPoint(:,num);
+        plot(curr(1),curr(2),'og');
+        fprintf("potential %3.2f\n", temp);
+%         if (goalPotential > temp)
+%             fprintf("potential %3.2f\n", temp);
+%             curr=testPoint(:,num);
+%             plot(curr(1),curr(2),'og');
+%         else
+%             curr = testPoint(:, floor(temp));
+%             curr(1) = curr(1) + floor(rand()*4 - 2);
+%             curr(2) = curr(2) + floor(rand()*4 - 2);
+%             fprintf("potential %3.2f\n", curr);
+%             plot(curr(1), curr(2), 'og');
+%         end
+           
+        path = [path, curr];
+        
+% using euclidean distance to measure whether path reaches the
+% one of the target frontiers.
 %         for i = 1 : size(over, 2)
 %             tempDis = norm(curr-over(:,i));
 %             if dis > tempDis

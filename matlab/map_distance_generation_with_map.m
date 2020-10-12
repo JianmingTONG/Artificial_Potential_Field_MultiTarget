@@ -1,20 +1,20 @@
 function dismap_map = map_distance_generation_with_map(map ,curr, target, obstacle, map_height, map_width)
 
     dismap_map = map;
-    for i = 1: size(dismap_map, 1)
-        for j = 1: size(dismap_map, 2)
-            if(dismap_map(i,j) == 255)
-                dismap_map(i, j) = 100000;
-            end
-        end
-    end
-    
+%     for i = 1: size(dismap_map, 1)
+%         for j = 1: size(dismap_map, 2)
+%             if(dismap_map(i,j) == -1)
+%                 dismap_map(i, j) = 10000;
+%             end
+%         end
+%     end
+%     
     for i = 1:size(target,2)
         dismap_map(target(1,i), target(2,i)) = 0;
     end
     
     for i = 1:size(obstacle,2)
-        dismap_map(obstacle(1,i), obstacle(2,i)) = 0;
+        dismap_map(obstacle(1,i), obstacle(2,i)) = -2;
     end
     
     curr_grow_boundary = zeros(2,1);
@@ -62,6 +62,43 @@ function dismap_map = map_distance_generation_with_map(map ,curr, target, obstac
                     condition = 1;
                 end
             end
+             
+%             if  ( ((curr_grow_boundary(1,i)+1) <= map_height) && ((curr_grow_boundary(2,i)+1) <= map_width) )
+%                 if dismap_map(curr_grow_boundary(1,i)+1, curr_grow_boundary(2,i)+1) == 0
+%                     dismap_map(curr_grow_boundary(1,i)+1, curr_grow_boundary(2,i)+1)  = iteration;
+%                     temp = [curr_grow_boundary(1,i)+1; curr_grow_boundary(2,i)+1];
+%                     next_grow_boundary = [next_grow_boundary, temp];
+%                     condition = 1;
+%                 end
+%             end
+%             
+%             if  ( ((curr_grow_boundary(1,i)-1) > 0) && ((curr_grow_boundary(2,i)+1) <= map_width) )
+%                 if dismap_map(curr_grow_boundary(1,i)-1, curr_grow_boundary(2,i)+1) == 0
+%                     dismap_map(curr_grow_boundary(1,i)-1, curr_grow_boundary(2,i)+1)  = iteration;
+%                     temp = [curr_grow_boundary(1,i)-1; curr_grow_boundary(2,i)+1];
+%                     next_grow_boundary = [next_grow_boundary, temp];
+%                     condition = 1;
+%                 end
+%             end
+%             
+%             if  ( ((curr_grow_boundary(1,i)+1) <= map_height) && ((curr_grow_boundary(2,i)-1) > 0) )
+%                 if dismap_map(curr_grow_boundary(1,i)+1, curr_grow_boundary(2,i)-1) == 0
+%                     dismap_map(curr_grow_boundary(1,i)+1, curr_grow_boundary(2,i)-1)  = iteration;
+%                     temp = [curr_grow_boundary(1,i)+1; curr_grow_boundary(2,i)-1];
+%                     next_grow_boundary = [next_grow_boundary, temp];
+%                     condition = 1;
+%                 end
+%             end
+%             
+%             if  ( ((curr_grow_boundary(1,i)-1) > 0) && ((curr_grow_boundary(2,i)-1) > 0) )
+%                 if dismap_map(curr_grow_boundary(1,i)-1, curr_grow_boundary(2,i)-1) == 0
+%                     dismap_map(curr_grow_boundary(1,i)-1, curr_grow_boundary(2,i)-1)  = iteration;
+%                     temp = [curr_grow_boundary(1,i)-1; curr_grow_boundary(2,i)-1];
+%                     next_grow_boundary = [next_grow_boundary, temp];
+%                     condition = 1;
+%                 end
+%             end
+             
         end
         
         if(condition == 0)
