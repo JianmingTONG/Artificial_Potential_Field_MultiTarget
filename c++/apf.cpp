@@ -34,8 +34,8 @@ int main(int argc, char** argv) {
     }
 
     // ---------------------------------------- read map from external file & show image;
-    infile.open("/home/nics/work/APF/apf_jianming_c/img_part.txt");
-    mapmat = cv::imread("/home/nics/work/APF/apf_jianming_c/img_part.jpg", cv::IMREAD_UNCHANGED);
+    infile.open("/home/jimmy/work/ROS_work/APF/apf_jianming_c/img_part.txt");
+    mapmat = cv::imread("/home/jimmy/work/ROS_work/APF/apf_jianming_c/img_part.jpg", cv::IMREAD_UNCHANGED);
     cv::imshow("name1", mapmat);
     cv::waitKey(0);
 
@@ -55,14 +55,14 @@ int main(int argc, char** argv) {
     infile.close();
 
     // ---------------------------------------- define the current point;
-    currentLoc.push_back(203);
-    currentLoc.push_back(145);
+    currentLoc.push_back(73);
+    currentLoc.push_back(114);
     path.push_back(currentLoc);
 
     // ---------------------------------------- visualize the potential map
     // visualize dismap;
     cv::Mat mapmat2;
-    mapmat2 = cv::imread("/home/nics/work/APF/apf_jianming_c/img_part.jpg", cv::IMREAD_COLOR);
+    mapmat2 = cv::imread("/home/jimmy/work/ROS_work/APF/apf_jianming_c/img_part.jpg", cv::IMREAD_COLOR);
     std::cout << mapmat2.rows << " " << mapmat2.cols << std::endl;
 
     // ---------------------------------------- visualize path;
@@ -169,6 +169,7 @@ int main(int argc, char** argv) {
     for(int i = 0; i< targets.size(); i++){
         dismap_backup[targets[i][0]][targets[i][1]] = 0;
     }
+
     for(int i = 0; i< obstacles.size(); i++){
         dismap_backup[obstacles[i][0]][obstacles[i][1]] = -2;
     }
@@ -249,7 +250,6 @@ int main(int argc, char** argv) {
                                 next_iter.push_back(tempLoc);
                             }
 
-
                             if (dismap[curr_iter[i][0]][curr_iter[i][1] + 1] == 0) {
                                 dismap[curr_iter[i][0]][curr_iter[i][1] + 1] = iter;
                                 std::vector<int> tempLoc;
@@ -278,7 +278,16 @@ int main(int argc, char** argv) {
                         std::vector<std::vector<int> >().swap(next_iter);
                         iter++;
                     }
+
                     dismap[curr_around[0]][curr_around[1]] = 0.1;
+
+                    // ----  reset invalid targets' distance value to 1000.
+                    for (int i = 0; i < targets.size(); i++){
+                        if(  (dismap[targets[i][0]][targets[i][1]] == 0) && ( (abs(targets[i][0] - curr_around[0]) + abs(targets[i][1] - curr_around[1])) > 1) ) {
+                            dismap[targets[i][0]][targets[i][1]] = 1000;
+                        }
+                    }
+
                 }
 
                 { // ------------------------------------ calculate current potential
@@ -354,7 +363,6 @@ int main(int argc, char** argv) {
                         next_iter.push_back(tempLoc);
                     }
 
-
                     if (dismap[curr_iter[i][0]][curr_iter[i][1] + 1] == 0) {
                         dismap[curr_iter[i][0]][curr_iter[i][1] + 1] = iter;
                         std::vector<int> tempLoc;
@@ -384,6 +392,14 @@ int main(int argc, char** argv) {
                 iter++;
             }
             dismap[currentLoc[0]][currentLoc[1]] = 0.1;
+
+            // ----  reset invalid targets' distance value to 1000.
+            for (int i = 0; i < targets.size(); i++){
+                if(  (dismap[targets[i][0]][targets[i][1]] == 0) && ( (abs(targets[i][0] - currentLoc[0]) + abs(targets[i][1] - currentLoc[1])) > 1) ) {
+                    dismap[targets[i][0]][targets[i][1]] = 1000;
+                }
+            }
+
         }
 
         for (int i = 0; i < targets.size() ; i++){

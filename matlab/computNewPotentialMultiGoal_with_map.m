@@ -8,6 +8,12 @@ attr= 0;
 Q_star=4;
 dis_map =  map_distance_generation_with_map(map ,curr, target, obstacle, height, width);
 
+for i = 1:size(target,2)
+   if((dis_map(target(1,i), target(2,i)) == 0) &&  ( abs(curr(1)-target(1,i)) + abs(curr(2)-target(2,i)) > 1 ) )
+       dis_map(target(1,i), target(2,i)) = 300;
+   end
+end
+
 %计算当前点距离终点的引力
 target_int = zeros(2,1);
 dis = zeros(1,4);

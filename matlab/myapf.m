@@ -1,16 +1,16 @@
 clc, clear all;
-figure(1);
+
 load apf2.mat
 height = size(map,1);
 width  = size(map,2);
 
-axis([0 height 0 width]);
 % begin=[2;2];
-begin =[204; 146];
+
+begin =[74; 115];
 % over=[14 14;5 14];
 % over=[14 6 14 ;14 14 2];
-hold on;
-inflation_radius = 5;
+
+inflation_radius = 4;
 % obstacle=[0 0 0 0 0 0 0 0 0 0 0  0  0  0  0  0   15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 1  2  3  4  5  6  7  8  9  10 11 12 13 14   1 2 3 4 5 6 7 8 9 10 11 12 13 14   5 5 5 5 5 5 5 5 5  5  5  5  10 10 10 10 10 10 10 10; 
 %           0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 15 15 15 15 15 15 15 15 15 15 15 15 15 15 0 0 0 0 0 0 0 0 0  0  0  0  0  0   2 3 4 5 6 7 8 9 10 11 12 15 14 13 12 11 10 6  9  13];
 % obstacle=[1 1 1 1 1 1 1 1 1 1  1  1  1  1  1     2  3  4  5  6  7  8  9  10 11 12 13 14    2  3  4  5  6  7  8  9  10 11 12 13 14 15     15 15 15 15 15 15 15 15 15 15 15 15 15 15     5 5 5 5 5 5 5 5 5  5  5  5   10 10 10 10 10 10 10 10; 
@@ -95,7 +95,7 @@ for i = 1: size(target,2)
 end
 
 % obstacles = [];
-% 
+
 % for i = 1: size(obstacle,2)
 %     if(map(obstacle(1,i)+1, obstacle(2,i))==100 && map(obstacle(1,i)-1, obstacle(2,i))==100 && map(obstacle(1,i), obstacle(2,i)-1)==100 && map(obstacle(1,i), obstacle(2,i)+1)==100)
 %         map(obstacle(1,i), obstacle(2,i)) = 10000;
@@ -104,8 +104,10 @@ end
 %     
 %     obstacles = [obstacles, obstacle(:,i)];
 % end
-
+figure(1);
 plot(begin(1), begin(2),'*b','MarkerSize', 1);
+axis([0 height 0 width]);
+hold on;
 plot(targets(1,:), targets(2,:), '*r', 'MarkerSize', 1);
 
 for i=1:size(obstacle,2)

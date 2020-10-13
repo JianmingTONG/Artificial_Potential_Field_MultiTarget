@@ -8,7 +8,7 @@ function dismap_map = map_distance_generation_with_map(map ,curr, target, obstac
 %             end
 %         end
 %     end
-%     
+
     for i = 1:size(target,2)
         dismap_map(target(1,i), target(2,i)) = 0;
     end

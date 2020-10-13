@@ -64,6 +64,15 @@ function [ point ] = path_plan_direct_around(infoGain, map, begin, target, obsta
 %         end
 
         dis_map = map_distance_generation_with_map(map, curr, target, obstacle, height, width);
+        
+        
+        % reset invalid targets' distance value
+        for i = 1:size(target,2)
+           if((dis_map(target(1,i), target(2,i)) == 0) &&  ( abs(curr(1)-target(1,i)) + abs(curr(2)-target(2,i)) > 1 ) )
+               dis_map(target(1,i), target(2,i)) = 1000;
+           end
+        end
+        
         for i = 1 : size(target, 2)
             tempDis = dis_map(target(1,i), target(2,i));
             if dis > tempDis

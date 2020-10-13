@@ -3,9 +3,9 @@ function potential_viewer()%, obstacle)
     load apf2.mat
     width  = size(map, 2);
     height = size(map, 1);
-    axis([0 height 0 width]);
-    begin =[204; 146];
-    inflation_radius = 10;
+    
+    begin =[75; 115];
+    inflation_radius = 4;
     
     obstacle = []; 
     target = [];
@@ -85,21 +85,18 @@ function potential_viewer()%, obstacle)
         targets = [targets, target(:,i)];
     end
 
-    obstacles = [];
-
-    for i = 1: size(obstacle,2)
-        if(map(obstacle(1,i)+1, obstacle(2,i))==100 && map(obstacle(1,i)-1, obstacle(2,i))==100 && map(obstacle(1,i), obstacle(2,i)-1)==100 && map(obstacle(1,i), obstacle(2,i)+1)==100)
-            continue;
-        end
-
-        obstacles = [obstacles, obstacle(:,i)];
-    end
+%     obstacles = [];
+% 
+%     for i = 1: size(obstacle,2)
+%         if(map(obstacle(1,i)+1, obstacle(2,i))==100 && map(obstacle(1,i)-1, obstacle(2,i))==100 && map(obstacle(1,i), obstacle(2,i)-1)==100 && map(obstacle(1,i), obstacle(2,i)+1)==100)
+%             continue;
+%         end
+% 
+%         obstacles = [obstacles, obstacle(:,i)];
+%     end
     
-    dismap = map_distance_generation_with_map(map ,begin, targets, obstacles, height, width);
-        
-    dismap(find( dismap == 10000)) = 0;
-    dismap(find( dismap == 20000)) = -5;
-    dismap(find( dismap == 20000)) = -5;
+    dismap = map_distance_generation_with_map(map ,begin, targets, obstacle, height, width);
+
     h = mesh(dismap);   
     
     path = [];
@@ -115,7 +112,7 @@ function potential_viewer()%, obstacle)
     z(find( z < -100)) = 0;
     z(find( z > 100)) = 10;
     h = mesh(z);   
-    
+%     axis([0 height 0 width]);
     
 
     ylabel({'$ Y $'},'Interpreter','latex','FontSize',5);
