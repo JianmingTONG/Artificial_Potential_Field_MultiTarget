@@ -1,4 +1,4 @@
-function potential_viewer()%, obstacle)
+ function potential_viewer()%, obstacle)
     clc, clear all;
     load apf2.mat
     width  = size(map, 2);
@@ -103,7 +103,7 @@ function potential_viewer()%, obstacle)
     z=zeros(width ,height);
     parfor i = 1 : height
         for j = 1 : width
-            z(j,i) = computNewPotentialMultiGoal_with_map(infoGain, map, [i;j], targets, obstacles, height, width, path);
+            z(j,i) = compute_potential_multi_goal(infoGain, map, [i;j], targets, obstacles, height, width, path);
         end
     end
     
