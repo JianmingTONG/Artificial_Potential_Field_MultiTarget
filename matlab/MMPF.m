@@ -1,6 +1,6 @@
 clc, clear all;
 
-load apf_paper.mat
+load map.mat
 height = size(map,1);
 width  = size(map,2);
 

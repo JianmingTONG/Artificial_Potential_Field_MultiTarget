@@ -1,6 +1,6 @@
 function MMPF_potential_viewer()
     clc, clear all, close all
-    load apf_paper.mat
+    load map.mat
     height = size(map,1);
     width  = size(map,2);
  
