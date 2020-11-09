@@ -151,13 +151,13 @@ function MMPF_potential_viewer()
     hold on
     dismap = zeros(size(center,2), height, width);
     for i = 1:size(center,2)
-        dismap(i,:,:) = map_distance_generation_version1and2(map ,center(:,i), obstacle, height, width);
+        dismap(i,:,:) = map_distance_generation(map ,center(:,i), obstacle, height, width);
     end
     %%%%%%%%%%%%%%%%%% 
     temp = computNewPotentialMultiGoal_version1and2(infoGain_cluster, dismap, begin, center, obstacle, []);
     plot3(begin(1),begin(2),temp,'-o','Color','b','MarkerSize',10,'MarkerFaceColor','#D9FFFF');
     hold on
-    point= path_plan_direct_around_version1and2_3d(infoGain_cluster, dismap, begin, center, obstacle, height, width);
+    point= compute_potential_multi_goal(infoGain_cluster, dismap, begin, center, obstacle, height, width);
     
     xlabel({'$ X/{\rm m} $'},'Interpreter','latex','FontSize',30);
     ylabel({'$ Y/{\rm m} $'},'Interpreter','latex','FontSize',30);
