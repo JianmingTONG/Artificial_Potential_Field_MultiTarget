@@ -5,179 +5,319 @@
 #include<string>
 #include<opencv2/opencv.hpp>
 #include<cstdlib>
-#define HEIGHT 352
-#define WIDTH  224
+#include<vector>
+#include <math.h>
+
+
+//#define HEIGHT 303
+//#define WIDTH  175
+#define HEIGHT 473
+#define WIDTH  372
 #define K_ATTRACT 1
-#define ETA_REPLUSIVE 3
-#define DIS_OBTSTACLE 3
+#define ETA_REPLUSIVE 1
+#define DIS_OBTSTACLE 4
 #define INFLATION_RADIUS 5
+#define IF_DEBUG
+
+
+void dismapConstruction_start_target(int* dismap_, int* dismap_backup_, int* curr){
+    std::vector<int *> curr_iter;
+    std::vector<int *> next_iter;
+
+    // initialize the dis_map with number of dismapBackup
+
+    memcpy(dismap_, dismap_backup_, sizeof(int) * HEIGHT * WIDTH);
+
+    int iter = 1;
+    curr_iter.push_back(new int[2]{curr[0], curr[1]});
+
+    // change pixel of the starting location to -500 to avoid being changed. After processing dismap, we changed it back to 0;
+    dismap_[(curr[0]) * WIDTH + curr[1]] = -500;
+
+    while (curr_iter.size() > 0) {
+        for (int i = 0; i < curr_iter.size(); i++) {
+            if (dismap_[(curr_iter[i][0] + 1) * WIDTH + curr_iter[i][1]] == 0) {
+                dismap_[(curr_iter[i][0] + 1) * WIDTH + curr_iter[i][1]] = iter;
+                next_iter.push_back(new int[2]{curr_iter[i][0] + 1, curr_iter[i][1]});
+            }
+
+            if (dismap_[(curr_iter[i][0]) * WIDTH + curr_iter[i][1] + 1] == 0) {
+                dismap_[(curr_iter[i][0]) * WIDTH + curr_iter[i][1] + 1] = iter;
+                next_iter.push_back(new int[2]{curr_iter[i][0], curr_iter[i][1] + 1});
+            }
+
+            if (dismap_[(curr_iter[i][0] - 1) * WIDTH + curr_iter[i][1]] == 0) {
+                dismap_[(curr_iter[i][0] - 1) * WIDTH + curr_iter[i][1]] = iter;
+                next_iter.push_back(new int[2]{curr_iter[i][0] - 1, curr_iter[i][1]});
+            }
+
+            if (dismap_[(curr_iter[i][0]) * WIDTH + curr_iter[i][1] - 1] == 0) {
+                dismap_[(curr_iter[i][0]) * WIDTH + curr_iter[i][1] - 1] = iter;
+                next_iter.push_back(new int[2]{curr_iter[i][0], curr_iter[i][1] - 1});
+            }
+        }
+        curr_iter.swap(next_iter);
+        std::vector<int *>().swap(next_iter);
+        iter++;
+    }
+    dismap_[(curr[0]) * WIDTH + curr[1]] = 0;  // int only zero is available
+    return ;
+}
+
+void dismapConstruction(int* dismap_, int* dismap_backup_, const std::vector<int* > targets, int* curr){
+    std::vector<int* > curr_iter, next_iter;
+
+    // initialize the dis_map with number of dismapBackup
+    memcpy(dismap_, dismap_backup_,sizeof(int)*HEIGHT*WIDTH);
+
+    for(int i = 0; i < targets.size(); i++){
+        dismap_[(targets[i][0])*WIDTH + targets[i][1] ] = 0;
+    }
+
+    int iter = 1;
+    curr_iter.push_back(curr);
+
+    // change pixel of the starting location to -500 to avoid being changed. After processing dismap, we changed it back to 0;
+    dismap_[(curr[0])*WIDTH + curr[1]] = -500;
+
+    while (curr_iter.size() > 0) {
+        for (int i = 0; i < curr_iter.size(); i++) {
+            if (dismap_[(curr_iter[i][0] + 1)*WIDTH + curr_iter[i][1]] == 0) {
+                dismap_[(curr_iter[i][0] + 1)*WIDTH + curr_iter[i][1]] = iter;
+                next_iter.push_back(new int[2]{curr_iter[i][0] + 1, curr_iter[i][1]});
+            }
+
+            if (dismap_[(curr_iter[i][0])*WIDTH + curr_iter[i][1] + 1] == 0) {
+                dismap_[(curr_iter[i][0])*WIDTH + curr_iter[i][1] + 1] = iter;
+                next_iter.push_back(new int[2]{curr_iter[i][0]    , curr_iter[i][1] + 1});
+            }
+
+            if (dismap_[(curr_iter[i][0] - 1)*WIDTH + curr_iter[i][1]] == 0) {
+                dismap_[(curr_iter[i][0] - 1)*WIDTH + curr_iter[i][1]] = iter;
+                next_iter.push_back(new int[2]{curr_iter[i][0] - 1, curr_iter[i][1]});
+            }
+
+            if (dismap_[(curr_iter[i][0])*WIDTH + curr_iter[i][1] - 1] == 0) {
+                dismap_[(curr_iter[i][0])*WIDTH + curr_iter[i][1] - 1] = iter;
+                next_iter.push_back(new int[2]{curr_iter[i][0]    , curr_iter[i][1] - 1});
+            }
+        }
+        curr_iter.swap(next_iter);
+        std::vector<int* >().swap(next_iter);
+        iter++;
+    }
+    dismap_[(curr[0])*WIDTH + curr[1]] = 0.1;
+
+    // ----  reset invalid targets' distance value to 1000.
+    for (int i = 0; i < targets.size(); i++){
+        if(  (dismap_[(targets[i][0])*WIDTH + targets[i][1]] == 0) && ( (abs(targets[i][0] - curr[0]) + abs(targets[i][1] - curr[1])) > 1) ) {
+            dismap_[(targets[i][0])*WIDTH + targets[i][1]] = 1000;
+        }
+    }
+    return ;
+}
+
 
 int main(int argc, char** argv) {
     // ---------------------------------------- define variables;
-    std::vector<std::vector<int>> obstacles, path, targets;
-    std::vector<int> obstacle, target, currentLoc, goal;
-    std::vector<float> infoGain;
-    float currentPotential, tempInfoGain, minDis2Frontier;
+    std::vector<int* > obstacles, path, targets;
+    int currentLoc[2], goal[2]; //target[2], obstacle[2]
+    float  minDis2Frontier;
     std::ifstream infile;
     cv::Mat mapmat;
-    int map[HEIGHT][WIDTH];
-    float dismap_backup[HEIGHT][WIDTH], dismap[HEIGHT][WIDTH], potentialmap[HEIGHT][WIDTH];
-
+    int map[HEIGHT*WIDTH];
+    std::vector<int * > dismap_targets_ptr;
+    int* dismap_backup = new int[HEIGHT*WIDTH];
 
     // ---------------------------------------- initialize the potentialmap
     for (int i = 0; i < HEIGHT; i++) {
         for (int j = 0; j < WIDTH; j++) {
-            potentialmap[i][j] = 0;
-            dismap[i][j] = 0;
-            dismap_backup[i][j] = 0;
+            dismap_backup[i*WIDTH + j] = 0;
         }
     }
 
     // ---------------------------------------- read map from external file & show image;
-    infile.open("/home/jimmy/work/ROS_work/APF/apf_jianming_c/img_part.txt");
-    mapmat = cv::imread("/home/jimmy/work/ROS_work/APF/apf_jianming_c/img_part.jpg", cv::IMREAD_UNCHANGED);
+    infile.open("/home/jimmy/work/ROS_work/APF/apf_jianming_c/robot1map_out.txt");
+    mapmat = cv::imread("/home/jimmy/work/ROS_work/APF/apf_jianming_c/img_part1.jpg", cv::IMREAD_UNCHANGED);
     cv::imshow("name1", mapmat);
     cv::waitKey(0);
 
     // ---------------------------------------- initialize the dismap & potential map from external files;
     for (int i = 0; i < HEIGHT; i++) {
         for (int j = 0; j < WIDTH; j++) {
-            infile >> map[i][j];
-//            if(map[i][j] == 100){
-//                dismap_backup[i][j] = 0; // value of pixel ranged from [-128, 127] or [0, 255], this value should be the value outside of pixel's value range, and could be any other value within the range of integer.
-//            }
-//            else
-            if(map[i][j] == -1){
-                dismap_backup[i][j] = -1; // value of pixel ranged from [-128, 127] or [0, 255], this value should be the value outside of pixel's value range, and could be any other value within the range of integer.
+            infile >> map[i*WIDTH + j];
+            if(map[i*WIDTH + j] == -1){
+                dismap_backup[i*WIDTH + j] = -1; // value of pixel ranged from [-128, 127] or [0, 255], this value should be the value outside of pixel's value range, and could be any other value within the range of integer.
             }
         }
     }
     infile.close();
 
     // ---------------------------------------- define the current point;
-    currentLoc.push_back(73);
-    currentLoc.push_back(114);
-    path.push_back(currentLoc);
+    currentLoc[0] = 89;
+    currentLoc[1] = 161;
+    path.push_back(new int[2]{89, 161});
 
     // ---------------------------------------- visualize the potential map
     // visualize dismap;
     cv::Mat mapmat2;
-    mapmat2 = cv::imread("/home/jimmy/work/ROS_work/APF/apf_jianming_c/img_part.jpg", cv::IMREAD_COLOR);
+    mapmat2 = cv::imread("/home/jimmy/work/ROS_work/APF/apf_jianming_c/img_part1.jpg", cv::IMREAD_COLOR);
     std::cout << mapmat2.rows << " " << mapmat2.cols << std::endl;
 
     // ---------------------------------------- visualize path;
-    int path_view[HEIGHT][WIDTH];
+    int path_view[HEIGHT*WIDTH];
     for( int i = 0 ; i< HEIGHT; i++){
-        for( int j = 0 ; j< HEIGHT; j++){
-            path_view[i][j] = 0;
+        for( int j = 0 ; j< WIDTH; j++){
+            path_view[i*WIDTH + j] = 0;
         }
     }
 
     // ------------------------------------------ find the obstacles & targets
-    for (int i = 1; i < HEIGHT-1; i++){
-        for (int j = 1; j < WIDTH-1; j++){
-            if(map[i][j] == 100){
-                obstacle.push_back(i);
-                obstacle.push_back(j);
-                obstacles.push_back(obstacle);
-                std::vector<int>().swap(obstacle);
+    for (int i = 2; i < HEIGHT-2; i++){
+        for (int j = 2; j < WIDTH-2; j++){
+            if(map[i*WIDTH + j] == 100){
+                obstacles.push_back(new int[2]{i,j});
             }
-            else if(map[i][j] == -1){
+            else if(map[i*WIDTH + j] == -1){
                 // accessiable frontiers
                 int numFree = 0, temp1 = 0;
 
-                if (map[i + 1][j] == 0){
-                    temp1 = temp1 + (map[i + 2][j    ] == 0) ? 1 : 0;
-                    temp1 = temp1 + (map[i + 1][j + 1] == 0) ? 1 : 0;
-                    temp1 = temp1 + (map[i + 1][j - 1] == 0) ? 1 : 0;
-                    numFree += +(temp1 > 0);
-                }
-
-                if (map[i][j + 1] == 0){
-                    temp1 = 0;
-                    temp1 = temp1 + (map[i    ][j + 2] == 0) ? 1 : 0;
-                    temp1 = temp1 + (map[i + 1][j + 1] == 0) ? 1 : 0;
-                    temp1 = temp1 + (map[i - 1][j + 1] == 0) ? 1 : 0;
+                if (map[(i + 1)*WIDTH + j] == 0){
+                    temp1 += (map[(i + 2)*WIDTH + j    ] == 0) ? 1 : 0;
+                    temp1 += (map[(i + 1)*WIDTH + j + 1] == 0) ? 1 : 0;
+                    temp1 += (map[(i + 1)*WIDTH + j - 1] == 0) ? 1 : 0;
                     numFree += (temp1 > 0);
                 }
 
-                if (map[i - 1][j] == 0){
+                if (map[i*WIDTH + j + 1] == 0){
                     temp1 = 0;
-                    temp1 = temp1 + (map[i - 1][j + 1] == 0) ? 1 : 0;
-                    temp1 = temp1 + (map[i - 1][j - 1] == 0) ? 1 : 0;
-                    temp1 = temp1 + (map[i - 2][j    ] == 0) ? 1 : 0;
+                    temp1 += (map[      i*WIDTH + j + 2] == 0) ? 1 : 0;
+                    temp1 += (map[(i + 1)*WIDTH + j + 1] == 0) ? 1 : 0;
+                    temp1 += (map[(i - 1)*WIDTH + j + 1] == 0) ? 1 : 0;
                     numFree += (temp1 > 0);
                 }
 
-                if (map[i][j - 1] == 0){
+                if (map[(i - 1) *WIDTH + j] == 0){
                     temp1 = 0;
-                    temp1 += (map[i    ][j - 2] == 0) ? 1 : 0;
-                    temp1 += (map[i + 1][j - 1] == 0) ? 1 : 0;
-                    temp1 += (map[i - 1][j - 1] == 0) ? 1 : 0;
+                    temp1 += (map[(i - 1)*WIDTH + j + 1] == 0) ? 1 : 0;
+                    temp1 += (map[(i - 1)*WIDTH + j - 1] == 0) ? 1 : 0;
+                    temp1 += (map[(i - 2)*WIDTH + j    ] == 0) ? 1 : 0;
+                    numFree += (temp1 > 0);
+                }
+
+                if (map[i * WIDTH + j - 1] == 0){
+                    temp1 = 0;
+                    temp1 += (map[    i  *WIDTH + j - 2] == 0) ? 1 : 0;
+                    temp1 += (map[(i + 1)*WIDTH + j - 1] == 0) ? 1 : 0;
+                    temp1 += (map[(i - 1)*WIDTH + j - 1] == 0) ? 1 : 0;
                     numFree += (temp1 > 0);
                 }
 
                 if( numFree > 0 ) {
-                    target.push_back(i);
-                    target.push_back(j);
-                    targets.push_back(target);
-                    std::vector<int>().swap(target);
+                    targets.push_back(new int[2]{i,j});
                 }
             }
         }
     }
-
-    // ------------------------------------------ calculate infoGain of targets
+    std::cout << "number obstacles" << obstacles.size() << std::endl;
 
     {
         // remove targets within the inflation radius of obstacles.
         std::cout << "number targets" << targets.size() << std::endl;
-        int idx_target = 0;
-        while (idx_target < targets.size()) {
+        for(int idx_target = targets.size()-1; idx_target>=0; idx_target--) {
             for (int i = 0; i < obstacles.size(); i++) {
                 if (abs(targets[idx_target][0] - obstacles[i][0]) +
                     abs(targets[idx_target][1] - obstacles[i][1]) < INFLATION_RADIUS) {
                     targets.erase(targets.begin() + idx_target);
-                    idx_target--;
                     break;
                 }
             }
-            idx_target++;
         }
         std::cout << "number targets after erase" << targets.size() << std::endl;
     }
 
-    for(int  i = 0; i < targets.size(); i++){
-//        if( ( map[targets[idx_target][0]+1][targets[idx_target][1]] == 100 ) || ( map[targets[idx_target][0]-1][targets[idx_target][1]] == 100 ) || ( map[targets[idx_target][0]][targets[idx_target][1]+1] == 100 )|| ( map[targets[idx_target][0]][targets[idx_target][1]-1] == 100 ) || ( map[targets[idx_target][0]+1][targets[idx_target][1]+1] == 100 ) || ( map[targets[idx_target][0]+1][targets[idx_target][1]-1] ==100 ) || ( map[targets[idx_target][0]-1][targets[idx_target][1]+1] == 100 ) || ( map[targets[idx_target][0]-1][targets[idx_target][1]-1] == 100 )){
-////        if( ( map[targets[idx_target][0]+1][targets[idx_target][1]] == 100 ) || ( map[targets[idx_target][0]-1][targets[idx_target][1]] == 100 ) || ( map[targets[idx_target][0]][targets[idx_target][1]+1] == 100 )|| ( map[targets[idx_target][0]][targets[idx_target][1]-1] == 100 )){
-//
-//        }
-        tempInfoGain = 0;
-//        tempInfoGain += (map[targets[i][0]+1][targets[i][1]+1] == -1)?1:0;
-//        tempInfoGain += (map[targets[i][0]+1][targets[i][1]-1] == -1)?1:0;
-        tempInfoGain += (map[targets[i][0]+1][targets[i][1]  ] == -1)?1:0;
-//        tempInfoGain += (map[targets[i][0]-1][targets[i][1]+1] == -1)?1:0;
-//        tempInfoGain += (map[targets[i][0]-1][targets[i][1]-1] == -1)?1:0;
-        tempInfoGain += (map[targets[i][0]-1][targets[i][1]  ] == -1)?1:0;
-        tempInfoGain += (map[targets[i][0]  ][targets[i][1]+1] == -1)?1:0;
-        tempInfoGain += (map[targets[i][0]  ][targets[i][1]-1] == -1)?1:0;
-
-        infoGain.push_back(tempInfoGain);
-    }
-
     // ------------------------------------------ set locations in dismap corresponding to targets as 0 to ensure that targets' distance will be calculated in the following operation. (dismapConstruction function).
-    for(int i = 0; i< targets.size(); i++){
-        dismap_backup[targets[i][0]][targets[i][1]] = 0;
-    }
+//    for(int i = 0; i< targets.size(); i++){
+//        dismap_backup[(targets[i][0])*WIDTH + targets[i][1]] = 0;
+//    }
 
     for(int i = 0; i< obstacles.size(); i++){
-        dismap_backup[obstacles[i][0]][obstacles[i][1]] = -2;
+        dismap_backup[(obstacles[i][0])*WIDTH + obstacles[i][1]] = -2;
+    }
+
+    // ------------------------------------------ cluster targets into different groups and find the center of each group.
+    // Note: x & y value of detected targets are in increasing order because of the detection is in laser scan order.
+    std::vector<int* > target_process(targets);
+    std::vector<int* > cluster_center;
+    std::vector<int>   infoGain_cluster;
+
+    while(target_process.size() > 0){
+        std::vector<int* > target_cluster;
+        target_cluster.push_back(target_process.back());
+        target_process.pop_back();
+
+        bool condition = true;
+        while(condition){
+            condition = false;
+            int size_target_process = target_process.size();
+            for (int i = size_target_process-1; i >= 0 ; i--){
+                for (int j = 0; j < target_cluster.size(); j++){
+                    int dis_ = abs(target_process[i][0] - target_cluster[j][0]) +  abs(target_process[i][1] - target_cluster[j][1]);
+                    if(dis_ < 3){
+                        target_cluster.push_back(target_process[i]);
+                        target_process.erase(target_process.begin() + i);
+                        condition = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        int center_[2]={0, 0};
+        int num_ = target_cluster.size();
+        for(int i = 0; i < num_; i++){
+            center_[0] += target_cluster[i][0];
+            center_[1] += target_cluster[i][1];
+        }
+
+        float center_float[2] = {float(center_[0]), float(center_[1])};
+        center_float[0] = center_float[0]/float(num_);
+        center_float[1] = center_float[1]/float(num_);
+
+        float min_dis_ = 100.0;
+        int min_idx_   = 10000;
+        for(int i = 0; i < num_; i++){
+            float temp_dis_ = abs(center_float[0]-float(target_cluster[i][0])) + abs(center_float[1]-float(target_cluster[i][1]));
+            if(temp_dis_ < min_dis_){
+                min_dis_ = temp_dis_;
+                min_idx_ = i;
+            }
+        }
+
+        cluster_center.push_back(new int[2]{target_cluster[min_idx_][0], target_cluster[min_idx_][1]});
+        infoGain_cluster.push_back(num_);
+    }
+
+#ifdef IF_DEBUG
+    for (int i = 0; i < cluster_center.size(); i++ ){
+        std::cout << "number:" << infoGain_cluster[i] << " cluster center= (" << cluster_center[i][0] << " " <<  cluster_center[i][1] << std::endl;
+    }
+#endif
+
+// ------------------------------------------ Generate Dismap starting from targets
+//    int dismap_target[HEIGHT*WIDTH];
+    int cluster_num = cluster_center.size();
+    int** dismap_target = new int* [cluster_num];
+    for (int i = 0; i<cluster_num; i++){
+        dismap_target[i] = new int[HEIGHT*WIDTH];
+    }
+    for(int i_ = 0; i_ < cluster_num; i_++) {
+        dismapConstruction_start_target(dismap_target[i_], dismap_backup, cluster_center[i_]);
+        dismap_targets_ptr.push_back(dismap_target[i_]);
     }
 
     // ------------------------------------------ calculate path.
     int iteration = 1;
-
-    currentPotential = 500;  // a random initialized value greater than all possible potentials.
     minDis2Frontier  = 500;  // a random initialized value greater than all possible distances.
     while(iteration < 2000 && minDis2Frontier > 1){
 
@@ -186,119 +326,35 @@ int main(int argc, char** argv) {
         // ------------------------------------------ get the minimial potential of the points around currentLoc
         {
             // ------------------------------------------ put locations around the current location into loc_around
-            std::vector<double> potential;
-            std::vector<int> curr_around;
-            std::vector<std::vector<int>> loc_around;
+            float potential[4];
+            int min_idx = 0;
+            float min_potential = 10000;
+            int* loc_around[4];
 
             // upper
-            curr_around.push_back(currentLoc[0]);
-            curr_around.push_back(currentLoc[1]+1);
-            loc_around.push_back(curr_around);
-
+            loc_around[0] = new int[2]{currentLoc[0], currentLoc[1]+1};
             // left
-            std::vector<int>().swap(curr_around);
-            curr_around.push_back(currentLoc[0]-1);
-            curr_around.push_back(currentLoc[1]);
-            loc_around.push_back(curr_around);
-
+            loc_around[1] = new int[2]{currentLoc[0] - 1, currentLoc[1]};
             // down
-            std::vector<int>().swap(curr_around);
-            curr_around.push_back(currentLoc[0]);
-            curr_around.push_back(currentLoc[1]-1);
-            loc_around.push_back(curr_around);
-
+            loc_around[2] = new int[2]{currentLoc[0]   , currentLoc[1] - 1};
             // right
-            std::vector<int>().swap(curr_around);
-            curr_around.push_back(currentLoc[0]+1);
-            curr_around.push_back(currentLoc[1]);
-            loc_around.push_back(curr_around);
-
+            loc_around[3] = new int[2]{currentLoc[0] + 1, currentLoc[1]};
 
             // ------------------------------------------ calculate potentials of four neighbors of currentLoc
-            for (int i = 0; i < loc_around.size(); i++){
-                std::vector<int>().swap(curr_around);
-                curr_around.push_back(loc_around[i][0]);
-                curr_around.push_back(loc_around[i][1]);
-
-                { // ------------------------------------------ calculate dismap
-                    std::vector<std::vector<int> > curr_iter, next_iter;
-
-                    // initialize the dis_map with number of dismapBackup
-                    memcpy(dismap, dismap_backup,sizeof(float)*HEIGHT*WIDTH);
-
-//                    for(int i = 0; i < obstacles.size(); i++){
-//                        dismap[obstacles[i][0] ][obstacles[i][1] ] = -2;
-//                    }
-
-                    for(int i = 0; i < targets.size(); i++){
-                        dismap[targets[i][0] ][targets[i][1] ] = 0;
-                    }
-
-                    int iter = 1;
-                    curr_iter.push_back(curr_around);
-
-                    // change pixel of the starting location to 10000 to avoid being changed. After processing dismap, we changed it back to 0;
-                    dismap[curr_around[0]][curr_around[1]] = 10000;
-
-                    while (curr_iter.size() > 0) {
-                        for (int i = 0; i < curr_iter.size(); i++) {
-                            if (dismap[curr_iter[i][0] + 1][curr_iter[i][1]] == 0) {
-                                dismap[curr_iter[i][0] + 1][curr_iter[i][1]] = iter;
-                                std::vector<int> tempLoc;
-                                tempLoc.push_back(curr_iter[i][0] + 1);
-                                tempLoc.push_back(curr_iter[i][1]);
-                                next_iter.push_back(tempLoc);
-                            }
-
-                            if (dismap[curr_iter[i][0]][curr_iter[i][1] + 1] == 0) {
-                                dismap[curr_iter[i][0]][curr_iter[i][1] + 1] = iter;
-                                std::vector<int> tempLoc;
-                                tempLoc.push_back(curr_iter[i][0]);
-                                tempLoc.push_back(curr_iter[i][1] + 1);
-                                next_iter.push_back(tempLoc);
-                            }
-
-                            if (dismap[curr_iter[i][0] - 1][curr_iter[i][1]] == 0) {
-                                dismap[curr_iter[i][0] - 1][curr_iter[i][1]] = iter;
-                                std::vector<int> tempLoc;
-                                tempLoc.push_back(curr_iter[i][0] - 1);
-                                tempLoc.push_back(curr_iter[i][1]);
-                                next_iter.push_back(tempLoc);
-                            }
-
-                            if (dismap[curr_iter[i][0]][curr_iter[i][1] - 1] == 0) {
-                                dismap[curr_iter[i][0]][curr_iter[i][1] - 1] = iter;
-                                std::vector<int> tempLoc;
-                                tempLoc.push_back(curr_iter[i][0]);
-                                tempLoc.push_back(curr_iter[i][1] - 1);
-                                next_iter.push_back(tempLoc);
-                            }
-                        }
-                        curr_iter.swap(next_iter);
-                        std::vector<std::vector<int> >().swap(next_iter);
-                        iter++;
-                    }
-
-                    dismap[curr_around[0]][curr_around[1]] = 0.1;
-
-                    // ----  reset invalid targets' distance value to 1000.
-                    for (int i = 0; i < targets.size(); i++){
-                        if(  (dismap[targets[i][0]][targets[i][1]] == 0) && ( (abs(targets[i][0] - curr_around[0]) + abs(targets[i][1] - curr_around[1])) > 1) ) {
-                            dismap[targets[i][0]][targets[i][1]] = 1000;
-                        }
-                    }
-
-                }
+            for (int i = 0; i < 4; i++){
+                int curr_around[2]={loc_around[i][0], loc_around[i][1]};
 
                 { // ------------------------------------ calculate current potential
                     float attract = 0, repulsive = 0;
-                    for (int i = 0; i < targets.size(); i++){
-                        float temp = dismap[targets[i][0]][targets[i][1]];
-                        if(temp < 0.1){
-                            std::cout << "zero loc: (" <<  targets[i][0]   << ", " <<  targets[i][1] << ")" << " temp" << temp << std::endl;
+                    for (int i = 0; i < cluster_center.size(); i++){
+                        int temp_int = dismap_targets_ptr[i][(curr_around[0])*WIDTH + curr_around[1]];
+                        float temp = float(dismap_targets_ptr[i][(curr_around[0])*WIDTH + curr_around[1]]);
+                        if(temp_int < 1){
+                            std::cout << "zero loc: (" <<  cluster_center[i][0]   << ", " <<  cluster_center[i][1] << ")" << " temp" << temp << std::endl;
                             std::cout << "curr loc: (" <<  curr_around[0]  << ", " << curr_around[1] << ")" << std::endl;
+                            continue;
                         }
-                        attract     = attract - K_ATTRACT*infoGain[i]/temp;
+                        attract     = attract - K_ATTRACT*infoGain_cluster[i]/temp;
                     }
 
                     for (int j = 0; j < obstacles.size(); j++){
@@ -315,102 +371,41 @@ int main(int argc, char** argv) {
                             attract += 5;
                         }
                     }
-                    potential.push_back(attract + repulsive);
+                    potential[i] = attract + repulsive;
+                    if(min_potential > potential[i] ){
+                        min_potential = potential[i];
+                        min_idx = i;
+                    }
                 }
-
             }
-
-            std::vector<int>().swap(curr_around);
-
-            // find the minimal potential around the current location
-            std::vector<double>::iterator min_idx = std::min_element(potential.begin(), potential.end());
-
-            path.push_back(loc_around[std::distance(std::begin(potential), min_idx)]);
-            currentPotential = potential[std::distance(std::begin(potential), min_idx)];
+            std::cout << "potential" <<std::setprecision(5) << min_potential <<std::endl;
+            path.push_back(loc_around[min_idx]);
         }
 
-        path_view[path.back()[0]][path.back()[1]] = 1;
+        path_view[(path.back()[0])*WIDTH + path.back()[1]] = 1;
         currentLoc[0] = (path.back())[0];
         currentLoc[1] = (path.back())[1];
 
-        {   // ------------------------------------------ calculate dismap
-            std::vector<std::vector<int> > curr_iter, next_iter;
-
-            // initialize the dis_map with number of dismapBackup
-            memcpy(dismap, dismap_backup,sizeof(float)*HEIGHT*WIDTH);
-
-//            for(int i = 0; i < obstacles.size(); i++){
-//                dismap[obstacles[i][0] ][obstacles[i][1] ] = 0;
-//            }
-
-            for(int i = 0; i < targets.size(); i++){
-                dismap[targets[i][0] ][targets[i][1] ] = 0;
+        for (int i = 0; i < cluster_center.size() ; i++){
+            int temp_dis_ =  dismap_targets_ptr[i][(currentLoc[0])*WIDTH + currentLoc[1]];
+            if( (temp_dis_ == 0) && (abs(currentLoc[0]-cluster_center[i][0]) + abs(currentLoc[1]-cluster_center[i][1])) > 0){
+                continue;
             }
 
-            int iter = 1;
-            curr_iter.push_back(currentLoc);
-
-            // change pixel of the starting location to -500 to avoid being changed. After processing dismap, we changed it back to 0;
-            dismap[currentLoc[0]][currentLoc[1]] = -500;
-
-            while (curr_iter.size() > 0) {
-                for (int i = 0; i < curr_iter.size(); i++) {
-                    if (dismap[curr_iter[i][0] + 1][curr_iter[i][1]] == 0) {
-                        dismap[curr_iter[i][0] + 1][curr_iter[i][1]] = iter;
-                        std::vector<int> tempLoc;
-                        tempLoc.push_back(curr_iter[i][0] + 1);
-                        tempLoc.push_back(curr_iter[i][1]);
-                        next_iter.push_back(tempLoc);
-                    }
-
-                    if (dismap[curr_iter[i][0]][curr_iter[i][1] + 1] == 0) {
-                        dismap[curr_iter[i][0]][curr_iter[i][1] + 1] = iter;
-                        std::vector<int> tempLoc;
-                        tempLoc.push_back(curr_iter[i][0]);
-                        tempLoc.push_back(curr_iter[i][1] + 1);
-                        next_iter.push_back(tempLoc);
-                    }
-
-                    if (dismap[curr_iter[i][0] - 1][curr_iter[i][1]] == 0) {
-                        dismap[curr_iter[i][0] - 1][curr_iter[i][1]] = iter;
-                        std::vector<int> tempLoc;
-                        tempLoc.push_back(curr_iter[i][0] - 1);
-                        tempLoc.push_back(curr_iter[i][1]);
-                        next_iter.push_back(tempLoc);
-                    }
-
-                    if (dismap[curr_iter[i][0]][curr_iter[i][1] - 1] == 0) {
-                        dismap[curr_iter[i][0]][curr_iter[i][1] - 1] = iter;
-                        std::vector<int> tempLoc;
-                        tempLoc.push_back(curr_iter[i][0]);
-                        tempLoc.push_back(curr_iter[i][1] - 1);
-                        next_iter.push_back(tempLoc);
-                    }
-                }
-                curr_iter.swap(next_iter);
-                std::vector<std::vector<int> >().swap(next_iter);
-                iter++;
-            }
-            dismap[currentLoc[0]][currentLoc[1]] = 0.1;
-
-            // ----  reset invalid targets' distance value to 1000.
-            for (int i = 0; i < targets.size(); i++){
-                if(  (dismap[targets[i][0]][targets[i][1]] == 0) && ( (abs(targets[i][0] - currentLoc[0]) + abs(targets[i][1] - currentLoc[1])) > 1) ) {
-                    dismap[targets[i][0]][targets[i][1]] = 1000;
-                }
-            }
-
-        }
-
-        for (int i = 0; i < targets.size() ; i++){
-            if(minDis2Frontier > dismap[targets[i][0]][targets[i][1]] ){
-                minDis2Frontier = dismap[targets[i][0]][targets[i][1]];
+            if(minDis2Frontier > temp_dis_ ){
+                minDis2Frontier = temp_dis_;
             }
         }
         iteration++;
     }
-    goal.push_back(path.back()[0]);
-    goal.push_back(path.back()[1]);
+    goal[0] = path.back()[0];
+    goal[1] = path.back()[1];
+
+    delete [] dismap_backup;
+    for (int i = 0; i<cluster_num; i++){
+        delete []  dismap_target[i];
+    }
+    delete [] dismap_target;
 
     // ------------------------------------------ draw obstacles in mapmat2.
     std::cout  << "number obstacles:" << obstacles.size() <<  std::endl;
